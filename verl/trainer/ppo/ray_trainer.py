@@ -291,6 +291,27 @@ def compute_advantage(
     return data
 
 
+def compute_success_rate(
+    data: DataProto,
+) -> DataProto:
+    """Compute success rate for policy optimization.
+
+    Args:
+        data (DataProto): The data containing batched model outputs and inputs.
+
+    Returns:
+        DataProto: The updated data with computed success rate.
+    """
+    # Call compute_grpo_outcome_advantage with parameters matching its definition
+    success_rate = core_algos.compute_success_rate(
+        token_level_rewards=data.batch["token_level_rewards"],
+        index=data.non_tensor_batch["uid"],
+    )
+    data.batch["success_rate"] = success_rate
+    
+    return data
+
+
 class RayPPOTrainer:
     """Distributed PPO trainer using Ray for scalable reinforcement learning.
 
@@ -1264,6 +1285,10 @@ class RayPPOTrainer:
                             num_repeat=self.config.actor_rollout_ref.rollout.n,
                             norm_adv_by_std_in_grpo=norm_adv_by_std_in_grpo,
                             config=self.config.algorithm,
+                        )
+
+                        batch = compute_success_rate(
+                            batch,
                         )
 
                     # update critic
