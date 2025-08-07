@@ -963,9 +963,6 @@ def compute_policy_loss_empo(
             Aggregation mode for `agg_loss`. Defaults to "token-mean".
     """
 
-    import ipdb
-    ipdb.set_trace()
-
     assert config is not None
     assert not isinstance(config, AlgoConfig)
     clip_ratio = config.clip_ratio  # Clipping parameter ε for standard PPO. See https://arxiv.org/abs/1707.06347.
@@ -1010,7 +1007,10 @@ def compute_policy_loss_empo(
     )
 
     pg_losses = torch.where(advantages < 0, clip_pg_losses2, clip_pg_losses1)
-    pg_loss = agg_loss(loss_mat=pg_losses, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
+    e = torch.exp(torch.tensor(1.0)).to(success_rate.device)
+    weighting_factor = e / (((e - 1) * success_rate + 1) ** 2)
+    pg_losses_reweighted = weighting_factor.unsqueeze(-1) * pg_losses
+    pg_loss = agg_loss(loss_mat=pg_losses_reweighted, loss_mask=response_mask, loss_agg_mode=loss_agg_mode)
 
     return pg_loss, pg_clipfrac, ppo_kl, pg_clipfrac_lower
 
